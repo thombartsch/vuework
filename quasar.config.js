@@ -1,6 +1,5 @@
-import { configure } from 'quasar/wrappers'
-
-export default configure(function (/* ctx */) {
+/* eslint-env node */
+module.exports = function (/* ctx */) {
   return {
     boot: [],
 
@@ -17,7 +16,8 @@ export default configure(function (/* ctx */) {
     },
 
     devServer: {
-      open: true
+      open: false,
+      port: 3000
     },
 
     framework: {
@@ -27,4 +27,4 @@ export default configure(function (/* ctx */) {
 
     animations: []
   }
-})
+}
