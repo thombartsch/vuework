@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Country Selector – Quasar CDN Preview</title>
+
+  <!-- Quasar CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/quasar@2/dist/quasar.prod.css" rel="stylesheet" />
+  <!-- Material Icons -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+
+  <style>
+    body { background: #f5f5f5; }
+    .chip-area {
+      min-height: 52px;
+      border: 1px dashed #bdbdbd;
+      border-radius: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      transition: border-color 0.2s;
+      background: #fff;
+    }
+    .chip-area.has-chips {
+      border: 1px solid #1976d2;
+    }
+    .sticky-search {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #fff;
+    }
+  </style>
+</head>
+<body>
+
+<div id="app"></div>
+
+<!-- Vue 3 -->
+<script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+<!-- Quasar JS -->
+<script src="https://cdn.jsdelivr.net/npm/quasar@2/dist/quasar.umd.prod.js"></script>
+
+<script>
+const COUNTRIES = [
+  'Afghanistan','Albania','Algeria','Andorra','Angola',
+  'Antigua and Barbuda','Argentina','Armenia','Australia','Austria',
+  'Azerbaijan','Bahamas','Bahrain','Bangladesh','Barbados',
+  'Belarus','Belgium','Belize','Benin','Bhutan',
+  'Bolivia','Bosnia and Herzegovina','Botswana','Brazil','Brunei',
+  'Bulgaria','Burkina Faso','Burundi','Cabo Verde','Cambodia',
+  'Cameroon','Canada','Central African Republic','Chad','Chile',
+  'China','Colombia','Comoros','Congo','Costa Rica',
+  'Croatia','Cuba','Cyprus','Czech Republic','Denmark',
+  'Djibouti','Dominica','Dominican Republic','Ecuador','Egypt',
+  'El Salvador','Equatorial Guinea','Eritrea','Estonia','Eswatini',
+  'Ethiopia','Fiji','Finland','France','Gabon',
+  'Gambia','Georgia','Germany','Ghana','Greece',
+  'Grenada','Guatemala','Guinea','Guinea-Bissau','Guyana',
+  'Haiti','Honduras','Hungary','Iceland','India',
+  'Indonesia','Iran','Iraq','Ireland','Israel',
+  'Italy','Jamaica','Japan','Jordan','Kazakhstan',
+  'Kenya','Kiribati','Kuwait','Kyrgyzstan','Laos',
+  'Latvia','Lebanon','Lesotho','Liberia','Libya',
+  'Liechtenstein','Lithuania','Luxembourg','Madagascar','Malawi',
+  'Malaysia','Maldives','Mali','Malta','Marshall Islands',
+  'Mauritania','Mauritius','Mexico','Micronesia','Moldova',
+  'Monaco','Mongolia','Montenegro','Morocco','Mozambique',
+  'Myanmar','Namibia','Nauru','Nepal','Netherlands',
+  'New Zealand','Nicaragua','Niger','Nigeria','North Korea',
+  'North Macedonia','Norway','Oman','Pakistan','Palau',
+  'Palestine','Panama','Papua New Guinea','Paraguay','Peru',
+  'Philippines','Poland','Portugal','Qatar','Romania',
+  'Russia','Rwanda','Saint Kitts and Nevis','Saint Lucia',
+  'Saint Vincent and the Grenadines','Samoa','San Marino',
+  'Sao Tome and Principe','Saudi Arabia','Senegal','Serbia',
+  'Seychelles','Sierra Leone','Singapore','Slovakia','Slovenia',
+  'Solomon Islands','Somalia','South Africa','South Korea','South Sudan',
+  'Spain','Sri Lanka','Sudan','Suriname','Sweden',
+  'Switzerland','Syria','Taiwan','Tajikistan','Tanzania',
+  'Thailand','Timor-Leste','Togo','Tonga','Trinidad and Tobago',
+  'Tunisia','Turkey','Turkmenistan','Tuvalu','Uganda',
+  'Ukraine','United Arab Emirates','United Kingdom','United States','Uruguay',
+  'Uzbekistan','Vanuatu','Vatican City','Venezuela','Vietnam',
+  'Yemen','Zambia','Zimbabwe'
+]
+
+const { createApp, ref, computed } = Vue
+
+const App = {
+  template: `
+    <q-layout view="lHh Lpr lFf">
+      <q-header elevated class="bg-primary text-white">
+        <q-toolbar>
+          <q-icon name="public" size="28px" class="q-mr-sm" />
+          <q-toolbar-title>Country Selector</q-toolbar-title>
+        </q-toolbar>
+      </q-header>
+
+      <q-page-container>
+        <q-page class="flex flex-center">
+          <div style="width:100%;max-width:640px" class="q-pa-lg">
+            <div class="text-h6 q-mb-md">Select Countries</div>
+
+            <!-- Chip display area -->
+            <div class="chip-area q-pa-sm q-mb-md" :class="{ 'has-chips': selected.length > 0 }">
+              <template v-if="selected.length > 0">
+                <q-chip
+                  v-for="country in selected"
+                  :key="country"
+                  removable
+                  dense
+                  color="primary"
+                  text-color="white"
+                  icon="flag"
+                  class="q-ma-xs"
+                  @remove="deselect(country)"
+                >{{ country }}</q-chip>
+              </template>
+              <span v-else class="text-grey-5 text-caption q-pa-xs">
+                No countries selected — use the button below to add some
+              </span>
+            </div>
+
+            <!-- Trigger button -->
+            <q-btn color="primary" icon="public" unelevated>
+              <span class="q-ml-xs">Select Countries</span>
+              <q-badge v-if="selected.length > 0" color="red" floating rounded>
+                {{ selected.length }}
+              </q-badge>
+
+              <q-menu
+                v-model="menuOpen"
+                style="min-width:300px"
+                max-height="420px"
+                anchor="bottom left"
+                self="top left"
+                @before-show="search = ''"
+              >
+                <!-- Search -->
+                <div class="q-pa-sm sticky-search">
+                  <q-input
+                    v-model="search"
+                    placeholder="Search countries…"
+                    dense
+                    outlined
+                    clearable
+                    autofocus
+                    @keydown.stop
+                  >
+                    <template #prepend><q-icon name="search" /></template>
+                  </q-input>
+                </div>
+
+                <q-separator />
+
+                <!-- Country list -->
+                <q-list dense style="overflow-y:auto;max-height:300px">
+                  <q-item v-if="filteredCountries.length === 0" class="justify-center">
+                    <q-item-section class="text-center text-caption text-grey-5 q-py-sm">
+                      No results for "{{ search }}"
+                    </q-item-section>
+                  </q-item>
+                  <q-item
+                    v-for="country in filteredCountries"
+                    :key="country"
+                    clickable
+                    :active="isSelected(country)"
+                    active-class="bg-blue-1"
+                    @click.stop="toggle(country)"
+                  >
+                    <q-item-section side top>
+                      <q-checkbox
+                        :model-value="isSelected(country)"
+                        color="primary"
+                        dense
+                        @click.stop
+                        @update:model-value="toggle(country)"
+                      />
+                    </q-item-section>
+                    <q-item-section>{{ country }}</q-item-section>
+                  </q-item>
+                </q-list>
+
+                <q-separator />
+
+                <!-- Footer -->
+                <div class="q-pa-sm row justify-between items-center bg-grey-1">
+                  <span class="text-caption text-grey-7">{{ selected.length }} selected</span>
+                  <div class="row q-gutter-xs">
+                    <q-btn flat dense size="sm" label="Clear all" color="negative"
+                      :disable="selected.length === 0" @click.stop="clearAll" />
+                    <q-btn flat dense size="sm" label="Done" color="primary"
+                      @click.stop="menuOpen = false" />
+                  </div>
+                </div>
+              </q-menu>
+            </q-btn>
+
+          </div>
+        </q-page>
+      </q-page-container>
+    </q-layout>
+  `,
+  setup () {
+    const selected = ref([])
+    const search = ref('')
+    const menuOpen = ref(false)
+
+    const filteredCountries = computed(() => {
+      const q = search.value.trim().toLowerCase()
+      return q ? COUNTRIES.filter(c => c.toLowerCase().includes(q)) : COUNTRIES
+    })
+
+    const isSelected = c => selected.value.includes(c)
+
+    function toggle (c) {
+      isSelected(c) ? deselect(c) : selected.value.push(c)
+    }
+    function deselect (c) {
+      selected.value = selected.value.filter(x => x !== c)
+    }
+    function clearAll () {
+      selected.value = []
+    }
+
+    return { selected, search, menuOpen, filteredCountries, isSelected, toggle, deselect, clearAll }
+  }
+}
+
+const app = createApp(App)
+app.use(Quasar, { config: {} })
+app.mount('#app')
+</script>
+</body>
+</html>
